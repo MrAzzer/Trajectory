@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from numpy._typing import _8Bit
 
 # Stałe
 m = 50  # masa w kg
@@ -14,75 +15,92 @@ def f_o(v):
 
 # Metoda Rungego-Kutty
 def rungego_kutty(dt=0.0001):
-    h, v, t = h0, v0, 0 #definicja wysokosci, predkosci i czasu
-    #Dopóki obiekt nie dotknie ziemi
-    while h >= 0:
-        #Obliczanie wartości pochodnej funkcji v(t) oraz h(t) dla kroków k1, k2, k3, k4
+    h, v, t = h0, v0, 0
+    h_max = h0  # Inicjalizacja maksymalnej wysokości
+
+    while True:
         k1_v = -g - f_o(v)/m
         k1_h = v
-
         k2_v = -g - f_o(v + 0.5 * dt * k1_v)/m
         k2_h = v + 0.5 * dt * k1_v
-
         k3_v = -g - f_o(v + 0.5 * dt * k2_v)/m
         k3_h = v + 0.5 * dt * k2_v
-
         k4_v = -g - f_o(v + dt * k3_v)/m
         k4_h = v + dt * k3_v
 
-        #Obliczanie nowych wartości funkcji v(t) oraz h(t)
-        v += (dt / 6) * (k1_v + 2*k2_v + 2*k3_v + k4_v)
-        h += (dt / 6) * (k1_h + 2*k2_h + 2*k3_h + k4_h)
-        t += dt #aktualizacja wartości kroku czasu
+        v_new = v + (dt / 6) * (k1_v + 2*k2_v + 2*k3_v + k4_v)
+        h_new = h + (dt / 6) * (k1_h + 2*k2_h + 2*k3_h + k4_h)
 
-    #Zwracanie maksymalnej wysokości i prędkości przy dotknięciu ziemi
-    return h0 + (v0**2) / (2 * g), abs(v)
+        # Aktualizacja maksymalnej wysokości po obliczeniu nowego h
+        h_max = max(h_max, h_new)
 
+        if h_new < 0:
+            break
 
-# Metoda Verleta
-def verleta(dt=0.0001):
-    h, v, t = h0, v0, 0 #definicja wysokosci, predkosci i czasu
-    a = -g - f_o(v) / m #obliczenie przyspieszenia
-    h_prev = h - v * dt + 0.5 * a * dt**2 #obliczenie poprzedniej wysokosci
-    while h >= 0:
-        #Obliczanie nowej pozycji
-        h_new = 2 * h - h_prev + a * dt**2
-        #Obliczanie nowej prędkości
-        v = (h_new - h_prev) / (2 * dt)
-        #obliczanie nowego przyspieszenia
-        a = -g - f_o(v) / m
-        #aktualizacja kroku i powrócenie do początku pętli
-        h_prev, h = h, h_new
+        h, v = h_new, v_new
         t += dt
 
-    return h0 + (v0**2) / (2 * g), abs(v)
+    return h_max, abs(v_new)
+
+# Metoda Velocity Verlet
+def verleta(dt=0.0001):
+    h, v, t = h0, v0, 0
+    a = -g - f_o(v) / m
+    h_max = h0
+
+    while True:
+        # Oblicz nowe położenie
+        h_new = h + v * dt + 0.5 * a * dt**2
+
+        # Oblicz prędkość w połowie kroku
+        v_half = v + 0.5 * a * dt
+
+        # Oblicz nowe przyspieszenie
+        a_new = -g - f_o(v_half) / m
+
+        # Oblicz nową prędkość
+        v_new = v + 0.5 * (a + a_new) * dt
+
+        # Aktualizacja maksymalnej wysokości
+        h_max = max(h_max, h_new)
+
+        if h_new < 0:
+            break
+
+        h, v, a = h_new, v_new, a_new
+        t += dt
+
+    return h_max, abs(v_new)
 
 # Metoda Heuna
 def heuna(dt=0.0001):
-    # Inicjalizacja zmiennych wysokosci, prędkości i czasu
     h, v, t = h0, v0, 0
+    h_max = h0
 
-    while h >= 0:
-        # Obliczanie przyspieszenia
+    while True:
         a = -g - f_o(v) / m
-        # Obliczanie przewidywanej pozycji
         v_pred = v + a * dt
-        # Obliczanie przewidywanej prędkości
         h_pred = h + v * dt
-        # Obliczanie przewidywanego przyspieszenia
         a_pred = -g - f_o(v_pred) / m
-        # iteracyjne obliczanie nowych wartości funkcji v(t) oraz h(t)
-        v += 0.5 * dt * (a + a_pred)
-        h += 0.5 * dt * (v + v_pred)
+
+        v_new = v + 0.5 * dt * (a + a_pred)
+        h_new = h + 0.5 * dt * (v + v_pred)
+
+        h_max = max(h_max, h_new)
+
+        if h_new < 0:
+            break
+
+        h, v = h_new, v_new
         t += dt
 
-    return h0 + (v0**2) / (2 * g), abs(v)
+    return h_max, abs(v_new)
 
 # Wyniki
 max_height_rk, impact_speed_rk = rungego_kutty()
 max_height_verlet, impact_speed_verlet = verleta()
 max_height_heun, impact_speed_heun = heuna()
 
-print(f"Metoda Rungego-Kutty: Wysokość = {max_height_rk:.8f} m, Prędość zderzenia = {impact_speed_rk:.8f} m/s")
-print(f"Metoda Verleta: Wysokość = {max_height_verlet:.8f} m, Prędość zderzenia = {impact_speed_verlet:.8f} m/s")
-print(f"Metoda Heuna: Wysokość = {max_height_heun:.8f} m, Prędość zderzenia = {impact_speed_heun:.8f} m/s")
+print(f"Metoda Rungego-Kutty: Wysokość = {max_height_rk:.8f} m, Prędkość zderzenia = {impact_speed_rk:.8f} m/s")
+print(f"Metoda Verleta: Wysokość = {max_height_verlet:.8f} m, Prędkość zderzenia = {impact_speed_verlet:.8f} m/s")
+print(f"Metoda Heuna: Wysokość = {max_height_heun:.8f} m, Prędkość zderzenia = {impact_speed_heun:.8f} m/s")
