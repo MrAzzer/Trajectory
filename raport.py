@@ -8,9 +8,9 @@ h0 = 100  # wysokość początkowa w m
 g = 9.81  # przyspieszenie ziemskie w m/s^2
 k = 0.5  # stała oporu powietrza
 
-# Funkcja obliczająca siłę oporu powietrza
+# Funkcja obliczająca siłę oporu powietrza z uwzględnieniem kierunku prędkości
 def f_o(v):
-    return k * v*v
+    return k * v * abs(v)
 
 # Metoda Rungego-Kutty
 def rungego_kutty(dt=0.0001):
@@ -86,4 +86,3 @@ max_height_heun, impact_speed_heun = heuna()
 print(f"Metoda Rungego-Kutty: Wysokość = {max_height_rk:.8f} m, Prędość zderzenia = {impact_speed_rk:.8f} m/s")
 print(f"Metoda Verleta: Wysokość = {max_height_verlet:.8f} m, Prędość zderzenia = {impact_speed_verlet:.8f} m/s")
 print(f"Metoda Heuna: Wysokość = {max_height_heun:.8f} m, Prędość zderzenia = {impact_speed_heun:.8f} m/s")
-
